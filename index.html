@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>매출 입력기 (iOS 완전호환 최종판)</title>
+  <title>매출 입력기 (iOS 완전호환 + 수정 기능)</title>
   <style>
     body {font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;margin:0;background:#f5f5f5;padding:10px;-webkit-text-size-adjust:none;}
     .container{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
@@ -42,7 +42,7 @@
   </table>
 
   <div style="text-align:center;">
-    <button onclick="saveData()">저장</button>
+    <button onclick="saveData()">저장 / 수정</button>
     <button onclick="clearForm()">입력 초기화</button>
     <button class="delete-btn" onclick="resetAllData()">전체 데이터 삭제</button>
     <button class="export-btn" onclick="exportCSV()">CSV 내보내기</button>
@@ -53,7 +53,7 @@
   <div class="warning">
     <strong>© 제작자: roasterhealing@gmail.com</strong><br>
     본 프로그램은 개인/기업 내부 사용 전용입니다.<br>
-    <strong>임의 배포, 무단 수정, 상업적 이용 시 법적 책임을 물을 수 있습니다.</strong>
+    <strong>임의 복사, 무단 수정, 상업적 이용 시 법적 책임을 물을 수 있습니다.</strong>
   </div>
 </div>
 
@@ -71,7 +71,7 @@ function normalizeDate(str){
   return m&&d?`${m.padStart(2,'0')}-${d.padStart(2,'0')}`:null;
 }
 
-// ✅ 저장
+// ✅ 저장 (같은 날짜 자동 덮어쓰기 기능 포함)
 function saveData(){
   const norm=normalizeDate(document.getElementById('date').value);
   if(!norm)return alert('날짜를 입력하세요 (예: 11/10)');
@@ -90,10 +90,18 @@ function saveData(){
     off:document.getElementById('off').value.trim()
   };
 
-  const list=JSON.parse(localStorage.getItem('dailyRecords')||'[]');
-  list.push(rec);
+  let list=JSON.parse(localStorage.getItem('dailyRecords')||'[]');
+  const idx=list.findIndex(r=>r.date===norm);
+  if(idx>=0){
+    if(confirm(`${norm} 데이터가 이미 있습니다. 덮어쓸까요?`)){
+      list[idx]=rec;
+    }else{
+      return alert('저장이 취소되었습니다.');
+    }
+  }else{
+    list.push(rec);
+  }
   localStorage.setItem('dailyRecords',JSON.stringify(list));
-
   alert(`저장 완료: ${norm}`);
   clearForm();
   universalUpdate();
@@ -105,15 +113,15 @@ function clearForm(){
   document.getElementById('total').textContent='0 원';
 }
 
-// ✅ 전체 데이터 삭제 (iOS 완전 대응)
+// ✅ 전체 데이터 삭제
 function resetAllData() {
   if (confirm('⚠️ 모든 데이터를 완전히 삭제하시겠습니까?')) {
     try {
       localStorage.removeItem('dailyRecords');
-      localStorage.setItem('dailyRecords', '[]'); // Safari 캐시 덮어쓰기
+      localStorage.setItem('dailyRecords', '[]');
       setTimeout(() => {
         alert('✅ 모든 데이터가 삭제되었습니다.');
-        location.reload(); // iOS에서 확실한 반영을 위해 리로드
+        location.reload();
       }, 200);
     } catch (e) {
       alert('삭제 중 오류가 발생했습니다.');
@@ -147,7 +155,8 @@ function safeUpdate(){
     document.getElementById('cumulative').innerHTML=`
       <strong>전체 누적</strong><br>
       매출: <strong>${total.toLocaleString()} 원</strong><br>
-      카오위: <strong>${kaowi.toFixed(1)}</strong> | 순살: <strong>${sunsal.toFixed(1)}</strong>
+      카오위: <strong>${kaowi.toFixed(1)}</strong> | 순살: <strong>${sunsal.toFixed(1)}</strong><br>
+      (총 ${list.length}건)
     `;
   }catch(e){
     setTimeout(safeUpdate,500);
@@ -194,7 +203,7 @@ function exportCSV(){
   a.click();
 }
 
-// ✅ 초기 로드 + iOS 대응
+// ✅ 초기 로드
 window.addEventListener('load',()=>{calcTotal();setTimeout(universalUpdate,800);});
 document.addEventListener('DOMContentLoaded',()=>setTimeout(universalUpdate,1200));
 window.addEventListener('pageshow',()=>setTimeout(universalUpdate,1000));
