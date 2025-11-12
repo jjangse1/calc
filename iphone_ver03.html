@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>매출 입력기 (iOS 완전호환 최종판)</title>
+  <style>
+    body {font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;margin:0;background:#f5f5f5;padding:10px;-webkit-text-size-adjust:none;}
+    .container{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
+    table{width:100%;border-collapse:collapse;margin:10px 0;font-size:15px;}
+    th,td{border:1px solid #ddd;padding:10px;text-align:left;}
+    th{background:#f8f9fa;}
+    input,textarea{width:100%;padding:10px;border:1px solid #ced4da;border-radius:8px;box-sizing:border-box;font-size:15px;}
+    .total-row{background:#e3f2fd !important;font-weight:bold;font-size:16px;}
+    .cumulative{background:#fff8e1;padding:15px;border-radius:8px;margin:15px 0;font-size:15px;line-height:1.6;}
+    button{padding:12px;margin:5px 0;background:#007bff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px;width:100%;}
+    button:hover{background:#0056b3;}
+    .export-btn{background:#28a745;}
+    .export-btn:hover{background:#218838;}
+    .delete-btn{background:#dc3545;}
+    .delete-btn:hover{background:#c82333;}
+    .warning{color:#dc3545;font-size:12px;text-align:center;margin-top:20px;line-height:1.4;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2 style="margin:0 0 15px;text-align:center;">매출 입력기</h2>
+
+  <table id="dailyTable">
+    <tr><th>항목</th><th>입력</th></tr>
+    <tr><td>날짜</td><td><input type="text" id="date" placeholder="11/10" /></td></tr>
+    <tr><td>홀</td><td><input type="number" id="hol" oninput="calcTotal()" /></td></tr>
+    <tr><td>배</td><td><input type="number" id="bae" oninput="calcTotal()" /></td></tr>
+    <tr><td>쿠</td><td><input type="number" id="ku" oninput="calcTotal()" /></td></tr>
+    <tr><td>요</td><td><input type="number" id="yo" oninput="calcTotal()" /></td></tr>
+    <tr class="total-row"><td>일일 합계</td><td id="total">0 원</td></tr>
+    <tr><td>카오위</td><td><input type="number" step="0.1" id="kaowi" /></td></tr>
+    <tr><td>순살</td><td><input type="number" step="0.1" id="sunsal" /></td></tr>
+    <tr><td>익일 근무자</td><td><textarea id="worker" rows="2" placeholder="금보"></textarea></td></tr>
+    <tr><td>익일 휴무자</td><td><textarea id="off" rows="2" placeholder="X"></textarea></td></tr>
+  </table>
+
+  <div style="text-align:center;">
+    <button onclick="saveData()">저장</button>
+    <button onclick="clearForm()">입력 초기화</button>
+    <button class="delete-btn" onclick="resetAllData()">전체 데이터 삭제</button>
+    <button class="export-btn" onclick="exportCSV()">CSV 내보내기</button>
+  </div>
+
+  <div class="cumulative" id="cumulative"><em>계산 중...</em></div>
+
+  <div class="warning">
+    <strong>© 제작자: roasterhealing@gmail.com</strong><br>
+    본 프로그램은 개인/기업 내부 사용 전용입니다.<br>
+    <strong>임의 배포, 무단 수정, 상업적 이용 시 법적 책임을 물을 수 있습니다.</strong>
+  </div>
+</div>
+
+<script>
+// ✅ 합계 계산
+function calcTotal(){
+  const sum=['hol','bae','ku','yo'].reduce((s,id)=>s+(parseFloat(document.getElementById(id).value)||0),0);
+  document.getElementById('total').textContent=sum.toLocaleString()+' 원';
+}
+
+// ✅ 날짜 정규화
+function normalizeDate(str){
+  if(!str)return null;
+  const [m,d]=str.replace(/[^0-9\/\-]/g,'').split(/[/\-]/);
+  return m&&d?`${m.padStart(2,'0')}-${d.padStart(2,'0')}`:null;
+}
+
+// ✅ 저장
+function saveData(){
+  const norm=normalizeDate(document.getElementById('date').value);
+  if(!norm)return alert('날짜를 입력하세요 (예: 11/10)');
+
+  const total=['hol','bae','ku','yo'].reduce((s,id)=>s+(parseFloat(document.getElementById(id).value)||0),0);
+  const rec={
+    date:norm,
+    hol:parseFloat(document.getElementById('hol').value)||0,
+    bae:parseFloat(document.getElementById('bae').value)||0,
+    ku:parseFloat(document.getElementById('ku').value)||0,
+    yo:parseFloat(document.getElementById('yo').value)||0,
+    total:total,
+    kaowi:parseFloat(document.getElementById('kaowi').value)||0,
+    sunsal:parseFloat(document.getElementById('sunsal').value)||0,
+    worker:document.getElementById('worker').value.trim(),
+    off:document.getElementById('off').value.trim()
+  };
+
+  const list=JSON.parse(localStorage.getItem('dailyRecords')||'[]');
+  list.push(rec);
+  localStorage.setItem('dailyRecords',JSON.stringify(list));
+
+  alert(`저장 완료: ${norm}`);
+  clearForm();
+  universalUpdate();
+}
+
+// ✅ 입력 초기화
+function clearForm(){
+  document.querySelectorAll('#dailyTable input, #dailyTable textarea').forEach(el=>el.value='');
+  document.getElementById('total').textContent='0 원';
+}
+
+// ✅ 전체 데이터 삭제 (iOS 완전 대응)
+function resetAllData() {
+  if (confirm('⚠️ 모든 데이터를 완전히 삭제하시겠습니까?')) {
+    try {
+      localStorage.removeItem('dailyRecords');
+      localStorage.setItem('dailyRecords', '[]'); // Safari 캐시 덮어쓰기
+      setTimeout(() => {
+        alert('✅ 모든 데이터가 삭제되었습니다.');
+        location.reload(); // iOS에서 확실한 반영을 위해 리로드
+      }, 200);
+    } catch (e) {
+      alert('삭제 중 오류가 발생했습니다.');
+      console.error(e);
+    }
+  }
+}
+
+// ✅ 누적 데이터 갱신
+function universalUpdate(){
+  setTimeout(safeUpdate,300);
+  setTimeout(safeUpdate,800);
+  setTimeout(safeUpdate,1500);
+}
+
+function safeUpdate(){
+  try{
+    const raw=localStorage.getItem('dailyRecords');
+    if(!raw||raw==='null'||raw==='undefined'){
+      document.getElementById('cumulative').innerHTML='<strong>데이터 없음</strong>';
+      return;
+    }
+    const list=JSON.parse(raw);
+    if(!Array.isArray(list)||list.length===0){
+      document.getElementById('cumulative').innerHTML='<strong>데이터 없음</strong>';
+      return;
+    }
+    const total=list.reduce((s,r)=>s+r.total,0);
+    const kaowi=list.reduce((s,r)=>s+r.kaowi,0);
+    const sunsal=list.reduce((s,r)=>s+r.sunsal,0);
+    document.getElementById('cumulative').innerHTML=`
+      <strong>전체 누적</strong><br>
+      매출: <strong>${total.toLocaleString()} 원</strong><br>
+      카오위: <strong>${kaowi.toFixed(1)}</strong> | 순살: <strong>${sunsal.toFixed(1)}</strong>
+    `;
+  }catch(e){
+    setTimeout(safeUpdate,500);
+  }
+}
+
+// ✅ CSV 내보내기
+function exportCSV(){
+  const input=document.getElementById('date').value.trim();
+  if(!input)return alert('날짜 입력');
+
+  const norm=normalizeDate(input);
+  const [month]=norm.split('-');
+  const year=2025;
+  const days=new Date(year,parseInt(month),0).getDate();
+
+  const list=JSON.parse(localStorage.getItem('dailyRecords')||'[]');
+  const map={};
+  list.forEach(r=>{
+    if(r.date.startsWith(month+'-')){
+      if(!map[r.date])map[r.date]={hol:0,bae:0,ku:0,yo:0,total:0,kaowi:0,sunsal:0,worker:'',off:''};
+      const d=map[r.date];
+      d.hol+=r.hol;d.bae+=r.bae;d.ku+=r.ku;d.yo+=r.yo;
+      d.total+=r.total;d.kaowi+=r.kaowi;d.sunsal+=r.sunsal;
+      d.worker=r.worker||d.worker;d.off=r.off||d.off;
+    }
+  });
+
+  let csv='\ufeff날짜,요일,홀,배,쿠,요,일일합계,카오위,순살,익일근무자,익일휴무자\n';
+  let sum={hol:0,bae:0,ku:0,yo:0,total:0,kaowi:0,sunsal:0};
+  for(let d=1;d<=days;d++){
+    const ds=`${month}-${d.toString().padStart(2,'0')}`;
+    const dateObj=new Date(year,parseInt(month)-1,d);
+    const yoil=dateObj.toLocaleDateString('ko-KR',{weekday:'short'});
+    const data=map[ds]||{hol:0,bae:0,ku:0,yo:0,total:0,kaowi:0,sunsal:0,worker:'',off:''};
+    csv+=`${ds},${yoil},${data.hol},${data.bae},${data.ku},${data.yo},${data.total},${data.kaowi.toFixed(1)},${data.sunsal.toFixed(1)},${data.worker},${data.off}\n`;
+    Object.keys(sum).forEach(k=>sum[k]+=data[k]);
+  }
+  csv+=`합계,-,${sum.hol},${sum.bae},${sum.ku},${sum.yo},${sum.total},${sum.kaowi.toFixed(1)},${sum.sunsal.toFixed(1)},,\n`;
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`매출_${year}${month}_전체.csv`;
+  a.click();
+}
+
+// ✅ 초기 로드 + iOS 대응
+window.addEventListener('load',()=>{calcTotal();setTimeout(universalUpdate,800);});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(universalUpdate,1200));
+window.addEventListener('pageshow',()=>setTimeout(universalUpdate,1000));
+</script>
+</body>
+</html>
