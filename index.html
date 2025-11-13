@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>매출 입력기 (복붙 지원)</title>
+  <title>매출 입력기 (최종 완성)</title>
   <style>
     body {font-family: -apple-system, sans-serif; margin:0; background:#f9f9f9; padding:15px;}
     .container {background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.1);}
@@ -15,32 +15,41 @@
     button {padding:14px; margin:8px 0; border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; width:100%;}
     .save {background:#007bff;}
     .clear {background:#6c757d;}
-    .delete {background:#dc3545;}
+    .delete {background:#dc3545 direttamente;}
     .export {background:#28a745;}
     .paste {background:#fd7e14;}
     .cumulative {background:#fff8e1; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;}
     .info {background:#d1ecf1; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;}
+    .data-list {background:#f8f9fa; padding:15px; border-radius:8px; margin:10px 0; max-height:400px; overflow-y:auto;}
+    .data-item {display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee;}
+    .date-btn {background:#007bff; color:#fff; padding:8px 12px; border-radius:6px; font-size:14px;}
+    .delete-btn {background:#dc3545; color:#fff; padding:8px 12px; border-radius:6px; font-size:14px;}
+    .result-list {background:#f8f9fa; padding:15px; border-radius:8px; margin:10px 0;}
+    .result-item {display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;}
+    .success {color:#28a745;}
+    .fail {color:#dc3545;}
+    .warning {background:#fff3cd; color:#856404; padding:12px; border-radius:8px; margin:15px 0; font-size:13px; text-align:center; border:1px solid #ffeaa7;}
   </style>
 </head>
 <body>
 <div class="container">
-  <h2 style="text-align:center; margin-bottom:20px;">매출 입력기 (복붙 가능)</h2>
+  <h2 style="text-align:center; margin-bottom:20px;">매출 입력기 (최종 완성)</h2>
 
   <div class="info">
-    <strong>📋 복붙 방법</strong><br>
-    1. 아래 양식 복사<br>
-    2. <strong>복붙 버튼</strong> 클릭 → 자동 입력
+    <strong>복붙 or  수동 입력</strong><br>
+    엑셀: 숫자만 → 열 분리 없음 + 정렬/합계 가능
   </div>
 
-  <button class="paste" onclick="openPaste()">📋 복붙 입력</button>
+  <button class="paste" onclick="openPaste()">카톡 복붙 입력</button>
 
+  <h3 style="margin:20px 0 10px;"> 수동 입력</h3>
   <table id="form">
     <tr><th>항목</th><th>입력</th></tr>
-    <tr><td>날짜</td><td><input type="text" id="date" placeholder="11/4" /></td></tr>
+    <tr><td>날짜</td><td><input type="text" id="date" placeholder="11/9" /></td></tr>
     <tr><td>홀</td><td><input type="number" id="hol" oninput="calc()" /></td></tr>
     <tr><td>배</td><td><input type="number" id="bae" oninput="calc()" /></td></tr>
-    <tr><td>쿠</td><td><input type="number" id="ku" oninput="calc()" /></td></tr>
-    <tr><td>요</td><td><input type="number" id="yo" oninput="calc()" /></td></tr>
+    <tr><td>쿠</td><td><input type="number" id="ku"  oninput="calc()" /></td></tr>
+    <tr><td>요</td><td><input type="number" id="yo"  oninput="calc()" /></td></tr>
     <tr class="total"><td>합계</td><td id="total">0 원</td></tr>
     <tr><td>카오위</td><td><input type="number" step="0.1" id="kaowi" /></td></tr>
     <tr><td>순살</td><td><input type="number" step="0.1" id="sunsal" /></td></tr>
@@ -48,21 +57,34 @@
     <tr><td>익일 휴무자</td><td><textarea id="off" rows="2"></textarea></td></tr>
   </table>
 
-  <button class="save" onclick="save()">저장</button>
+  <button class="save" onclick="saveManual()">수동 저장</button>
   <button class="clear" onclick="resetForm()">입력 초기화</button>
   <button class="delete" onclick="deleteAll()">전체 삭제</button>
-  <button class="export" onclick="exportCSV()">CSV 내보내기</button>
+  <button class="export" onclick="exportCSV()">엑셀 내보내기</button>
+
+  <div id="resultSummary" class="success" style="display:none; text-align:center; font-weight:bold;"></div>
+  <div id="resultList" class="result-list" style="display:none;"></div>
+
+  <h3 style="margin:20px 0 10px;">📋 저장된 데이터 (클릭하여 수정)</h3>
+  <div id="dataList" class="data-list"><p>데이터 없음</p></div>
 
   <div class="cumulative" id="cumulative"><strong>데이터 없음</strong></div>
+
+  <!-- 무단사용 금지 문구 추가 -->
+  <div class="warning">
+    <strong>⚠️ 무단 사용 및 배포 금지 ⚠️</strong><br>
+    제작자:roasterhealing@gmail.com <br>
+    본 앱은 내부용으로 제작되었으며, 무단 복제·배포·상업적 이용 시 법적 책임이 따를 수 있습니다.
+  </div>
 </div>
 
-<!-- 복붙 입력 팝업 -->
+<!-- 복붙 팝업 -->
 <div id="pasteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999;">
   <div style="background:#fff; margin:15% auto; padding:20px; width:90%; max-width:500px; border-radius:12px;">
-    <h3>복붙 입력</h3>
-    <textarea id="pasteText" placeholder="여기에 복사한 텍스트 붙여넣기" style="width:100%; height:200px; padding:10px; font-size:14px;"></textarea>
+    <h3>카톡 복붙 입력</h3>
+    <textarea id="pasteText" placeholder="카톡 메시지 붙여넣기" style="width:100%; height:250px; padding:10px; font-size:14px;"></textarea>
     <div style="text-align:center; margin-top:15px;">
-      <button onclick="parsePaste()" style="background:#007bff; color:#fff; padding:12px 20px; border:none; border-radius:8px;">파싱 & 입력</button>
+      <button onclick="parseKakao()" style="background:#007bff; color:#fff; padding:12px 20px; border:none; border-radius:8px;">자동 파싱 & 저장</button>
       <button onclick="closePaste()" style="background:#6c757d; color:#fff; padding:12px 20px; border:none; border-radius:8px; margin-left:10px;">취소</button>
     </div>
   </div>
@@ -71,83 +93,19 @@
 <script>
 const KEY = 'salesData';
 
+// 수동 입력 계산 (앱 내는 콤마 + 원 유지)
 function calc() {
-  const sum = (parseFloat(document.getElementById('hol').value)||0) + 
-              (parseFloat(document.getElementById('bae').value)||0) + 
-              (parseFloat(document.getElementById('ku').value)||0) + 
-              (parseFloat(document.getElementById('yo').value)||0);
+  const sum = ['hol','bae','ku','yo'].reduce((s, id) => s + (parseFloat(document.getElementById(id).value) || 0), 0);
   document.getElementById('total').textContent = sum.toLocaleString() + ' 원';
 }
 
-function normalizeDate(d) {
-  if (!d) return null;
-  const [m, day] = d.split(/[/\-]/);
-  return m && day ? `${m.padStart(2,'0')}-${day.padStart(2,'0')}` : null;
-}
-
-// 복붙 팝업 열기
-function openPaste() {
-  document.getElementById('pasteModal').style.display = 'block';
-  document.getElementById('pasteText').focus();
-}
-
-// 닫기
-function closePaste() {
-  document.getElementById('pasteModal').style.display = 'none';
-}
-
-// 파싱 & 입력
-function parsePaste() {
-  const text = document.getElementById('pasteText').value.trim();
-  if (!text) return alert('텍스트를 붙여넣으세요.');
-  
-  const lines = text.split('\n').map(l => l.trim());
-  let date = '', hol = 0, bae = 0, ku = 0, yo = 0, kaowi = 0, sunsal = 0, worker = '', off = '';
-  
-  lines.forEach(line => {
-    if (line.match(/^\d+\/\d+/)) {
-      date = line.split(' ')[0]; // 11/4
-    } else if (line.includes('홀')) {
-      hol = parseFloat(line.replace(/[^\d]/g, '')) || 0;
-    } else if (line.includes('배')) {
-      bae = parseFloat(line.replace(/[^\d]/g, '')) || 0;
-    } else if (line.includes('쿠')) {
-      ku = parseFloat(line.replace(/[^\d]/g, '')) || 0;
-    } else if (line.includes('요')) {
-      yo = parseFloat(line.replace(/[^\d]/g, '')) || 0;
-    } else if (line.includes('카오위')) {
-      kaowi = parseFloat(line.replace(/[^\d.]/g, '')) || 0;
-    } else if (line.includes('순살')) {
-      sunsal = parseFloat(line.replace(/[^\d.]/g, '')) || 0;
-    } else if (line.includes('근무자')) {
-      worker = line.split(':')[1]?.trim() || '';
-    } else if (line.includes('휴무자')) {
-      off = line.split(':')[1]?.trim() || '';
-    }
-  });
-
-  if (!date) return alert('날짜를 찾을 수 없습니다.');
-
-  // 입력 필드에 자동 채우기
-  document.getElementById('date').value = date;
-  document.getElementById('hol').value = hol;
-  document.getElementById('bae').value = bae;
-  document.getElementById('ku').value = ku;
-  document.getElementById('yo').value = yo;
-  document.getElementById('kaowi').value = kaowi;
-  document.getElementById('sunsal').value = sunsal;
-  document.getElementById('worker').value = worker;
-  document.getElementById('off').value = off;
-
-  calc();
-  closePaste();
-  alert('자동 입력 완료! 저장 버튼을 누르세요.');
-}
-
-function save() {
+// 수동 저장
+function saveManual() {
   const date = normalizeDate(document.getElementById('date').value);
   if (!date) return alert('날짜 입력');
-  const total = parseFloat(document.getElementById('total').textContent.replace(/[^0-9]/g,'')) || 0;
+  const total = parseNum(document.getElementById('total').textContent);
+  if (total === 0) return alert('매출 입력');
+
   const data = {
     date, hol: +document.getElementById('hol').value || 0,
     bae: +document.getElementById('bae').value || 0,
@@ -155,28 +113,193 @@ function save() {
     yo: +document.getElementById('yo').value || 0,
     total, kaowi: +document.getElementById('kaowi').value || 0,
     sunsal: +document.getElementById('sunsal').value || 0,
-    worker: document.getElementById('worker').value,
-    off: document.getElementById('off').value
+    worker: document.getElementById('worker').value.trim(),
+    off: document.getElementById('off').value.trim()
   };
+
   let list = JSON.parse(localStorage.getItem(KEY) || '[]');
-  list.push(data);
+  const index = list.findIndex(r => r.date === date);
+  if (index !== -1) {
+    if (!confirm('같은 날짜가 있습니다. 덮어쓰시겠습니까?')) return;
+    list[index] = data;
+  } else {
+    list.push(data);
+  }
   localStorage.setItem(KEY, JSON.stringify(list));
-  alert('저장됨');
+
+  alert('저장 완료');
   resetForm();
+  loadDataList();
   updateCum();
 }
 
+// 입력 초기화
 function resetForm() {
   document.getElementById('form').reset();
   calc();
 }
 
+// 전체 삭제
 function deleteAll() {
-  if (confirm('모든 데이터 삭제?')) {
+  if (confirm('⚠️ 모든 데이터 삭제?')) {
     localStorage.setItem(KEY, '[]');
+    loadDataList();
     updateCum();
     alert('삭제 완료');
   }
+}
+
+// 데이터 목록 로드
+function loadDataList() {
+  let list = JSON.parse(localStorage.getItem(KEY) || '[]');
+  list.sort((a, b) => a.date.localeCompare(b.date));
+  let html = '';
+  list.forEach((r, i) => {
+    const formatted = r.date.replace(/(\d{2})-(\d{2})/, '$1/$2');
+    html += `
+      <div class="data-item">
+        <button class="date-btn" onclick="editData(${i})">${formatted}</button>
+        <button class="delete-btn" onclick="deleteSingle(${i})">삭제</button>
+      </div>
+    `;
+  });
+  document.getElementById('dataList').innerHTML = html || '<p>데이터 없음</p>';
+}
+
+// 개별 수정
+function editData(index) {
+  const list = JSON.parse(localStorage.getItem(KEY) || '[]');
+  const data = list[index];
+  if (!data) return;
+
+  document.getElementById('date').value = data.date.replace(/(\d{2})-(\d{2})/, '$1/$2');
+  document.getElementById('hol').value = data.hol;
+  document.getElementById('bae').value = data.bae;
+  document.getElementById('ku').value = data.ku;
+  document.getElementById('yo').value = data.yo;
+  document.getElementById('kaowi').value = data.kaowi;
+  document.getElementById('sunsal').value = data.sunsal;
+  document.getElementById('worker').value = data.worker;
+  document.getElementById('off').value = data.off;
+  calc();
+
+  document.getElementById('form').scrollIntoView({behavior: 'smooth'});
+  alert('수정할 데이터 불러옴 → 저장 버튼 누르세요');
+}
+
+// 개별 삭제
+function deleteSingle(index) {
+  if (confirm('이 날짜 데이터를 삭제하시겠습니까?')) {
+    let list = JSON.parse(localStorage.getItem(KEY) || '[]');
+    list.splice(index, 1);
+    localStorage.setItem(KEY, JSON.stringify(list));
+    loadDataList();
+    updateCum();
+  }
+}
+
+// 엑셀 내보내기 (숫자만)
+function exportCSV() {
+  let list = JSON.parse(localStorage.getItem(KEY) || '[]');
+  if (!list.length) return alert('데이터 없음');
+
+  list.sort((a, b) => a.date.localeCompare(b.date));
+
+  let csv = '\ufeff날짜,요일,홀,배,쿠,요,일일합계,카오위,순살,익일근무자,익일휴무자\n';
+  let sum = {hol:0, bae:0, ku:0, yo:0, total:0, kaowi:0, sunsal:0};
+
+  list.forEach(r => {
+    const [month, day] = r.date.split('-');
+    const dateObj = new Date(2025, parseInt(month)-1, parseInt(day));
+    const yoil = dateObj.toLocaleDateString('ko-KR', {weekday:'short'});
+    
+    csv += `${r.date},${yoil},${r.hol},${r.bae},${r.ku},${r.yo},${r.total},${r.kaowi.toFixed(1)},${r.sunsal.toFixed(1)},${r.worker},${r.off}\n`;
+    
+    sum.hol += r.hol; sum.bae += r.bae; sum.ku += r.ku; sum.yo += r.yo;
+    sum.total += r.total; sum.kaowi += r.kaowi; sum.sunsal += r.sunsal;
+  });
+
+  csv += `합계,-,${sum.hol},${sum.bae},${sum.ku},${sum.yo},${sum.total},${sum.kaowi.toFixed(1)},${sum.sunsal.toFixed(1)},,\n`;
+
+  const fileName = `매출_전체_${new Date().toISOString().slice(0,10)}.csv`;
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 카톡 복붙 파싱
+function parseKakao() {
+  let text = document.getElementById('pasteText').value;
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\u00A0/g, ' ').trim();
+  if (!text) return alert('텍스트를 붙여넣으세요.');
+
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  const results = [];
+  let savedCount = 0;
+  let entry = null;
+
+  lines.forEach(line => {
+    line = line.replace(/\s+/g, ' ').trim();
+    if (/^\d+\/\d+/.test(line)) {
+      if (entry && entry.total > 0) {
+        saveEntry(entry, results);
+        savedCount++;
+      }
+      entry = { date: line.match(/^\d+\/\d+/)[0], hol: 0, bae: 0, ku: 0, yo: 0, total: 0, kaowi: 0, sunsal: 0, worker: '', off: '' };
+    } else if (entry) {
+      if (/홀/.test(line)) entry.hol = parseNum(line);
+      else if (/배/.test(line)) entry.bae = parseNum(line);
+      else if (/쿠/.test(line)) entry.ku = parseNum(line);
+      else if (/요/.test(line)) entry.yo = parseNum(line);
+      else if (/합/.test(line)) entry.total = parseNum(line);
+      else if (/카오위/.test(line)) entry.kaowi = parseFloat(line.replace(/[^\d.]/g, '')) || 0;
+      else if (/순살/.test(line)) entry.sunsal = parseFloat(line.replace(/[^\d.]/g, '')) || 0;
+      else if (/근무자/.test(line)) entry.worker = line.split(/근무자[:\s]*/)[1]?.trim() || '';
+      else if (/휴무자/.test(line)) entry.off = line.split(/휴무자[:\s]*/)[1]?.trim() || '';
+    }
+  });
+
+  if (entry && entry.total > 0) {
+    saveEntry(entry, results);
+    savedCount++;
+  } else if (entry) {
+    results.push({ date: entry.date || '알 수 없음', status: 'fail' });
+  }
+
+  closePaste();
+  displayResults(results, savedCount);
+  loadDataList();
+  updateCum();
+}
+
+function saveEntry(entry, results) {
+  const normDate = normalizeDate(entry.date);
+  if (!normDate) {
+    results.push({ date: entry.date, status: 'fail' });
+    return;
+  }
+  let list = JSON.parse(localStorage.getItem(KEY) || '[]');
+  if (list.some(r => r.date === normDate)) {
+    results.push({ date: normDate, status: 'duplicate' });
+    return;
+  }
+  const data = { date: normDate, hol: entry.hol, bae: entry.bae, ku: entry.ku, yo: entry.yo,
+    total: entry.total, kaowi: entry.kaowi, sunsal: entry.sunsal, worker: entry.worker, off: entry.off };
+  list.push(data);
+  localStorage.setItem(KEY, JSON.stringify(list));
+  results.push({ date: normDate, status: 'success' });
+}
+
+function parseNum(str) {
+  const num = str.replace(/[^\d]/g, '');
+  return num ? parseInt(num, 10) : 0;
+}
+
+function normalizeDate(d) {
+  const match = d.match(/(\d+)\/(\d+)/);
+  return match ? `${match[1].padStart(2,'0')}-${match[2].padStart(2,'0')}` : null;
 }
 
 function updateCum() {
@@ -188,29 +311,47 @@ function updateCum() {
   const total = list.reduce((s, r) => s + r.total, 0);
   const kaowi = list.reduce((s, r) => s + r.kaowi, 0);
   const sunsal = list.reduce((s, r) => s + r.sunsal, 0);
+  const count = list.length;
   document.getElementById('cumulative').innerHTML = `
-    <strong>누적</strong><br>
+    <strong>전체 누적 (${count}건)</strong><br>
     매출: <strong>${total.toLocaleString()} 원</strong><br>
     카오위: <strong>${kaowi.toFixed(1)}</strong> | 순살: <strong>${sunsal.toFixed(1)}</strong>
   `;
 }
 
-function exportCSV() {
-  const date = normalizeDate(document.getElementById('date').value);
-  if (!date) return alert('날짜 입력');
-  const [month] = date.split('-');
-  const list = JSON.parse(localStorage.getItem(KEY) || '[]');
-  let csv = '\ufeff날짜,홀,배,쿠,요,합계,카오위,순살,근무자,휴무자\n';
-  list.filter(r => r.date.startsWith(month + '-')).forEach(r => {
-    csv += `${r.date},${r.hol},${r.bae},${r.ku},${r.yo},${r.total},${r.kaowi},${r.sunsal},"${r.worker}","${r.off}"\n`;
+function displayResults(results, saved) {
+  const summary = document.getElementById('resultSummary');
+  const list = document.getElementById('resultList');
+  
+  summary.innerHTML = `<strong>총 ${results.length}건 중 ${saved}건 저장 완료!</strong>`;
+  summary.style.display = 'block';
+
+  let html = '';
+  results.forEach(r => {
+    const formatted = r.date.replace(/(\d{2})-(\d{2})/, '$1/$2');
+    const icon = r.status === 'success' ? '성공' : (r.status === 'duplicate' ? '중복' : '실패');
+    const msg = r.status === 'success' ? '저장' : (r.status === 'duplicate' ? '중복' : '실패');
+    html += `<div class="result-item"><span>${formatted}</span><span class="${r.status === 'success' ? 'success' : 'fail'}">${icon} ${msg}</span></div>`;
   });
-  const blob = new Blob([csv], {type: 'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `매출_${month}.csv`; a.click();
+  list.innerHTML = html;
+  list.style.display = 'block';
+  setTimeout(() => { summary.style.display = 'none'; list.style.display = 'none'; }, 4000);
 }
 
-window.onload = () => { calc(); updateCum(); };
+function openPaste() {
+  document.getElementById('pasteModal').style.display = 'block';
+  document.getElementById('pasteText').focus();
+}
+function closePaste() {
+  document.getElementById('pasteModal').style.display = 'none';
+  document.getElementById('pasteText').value = '';
+}
+
+window.onload = () => {
+  calc();
+  loadDataList();
+  updateCum();
+};
 </script>
 </body>
 </html>
