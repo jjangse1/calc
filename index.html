@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>매출 입력기 (최종 완성)</title>
+  <title>매출 입력기 (최종 검증)</title>
   <style>
     body {font-family: -apple-system, sans-serif; margin:0; background:#f9f9f9; padding:15px;}
     .container {background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.1);}
@@ -15,8 +15,9 @@
     button {padding:14px; margin:8px 0; border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; width:100%;}
     .save {background:#007bff;}
     .clear {background:#6c757d;}
-    .delete {background:#dc3545 direttamente;}
+    .delete {background:#dc3545;}
     .export {background:#28a745;}
+    .import {background:#17a2b8;}
     .paste {background:#fd7e14;}
     .cumulative {background:#fff8e1; padding:15px; border-radius:8px; margin:15px 0; font-size:15px;}
     .info {background:#d1ecf1; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;}
@@ -33,16 +34,16 @@
 </head>
 <body>
 <div class="container">
-  <h2 style="text-align:center; margin-bottom:20px;">매출 입력기 (최종 완성)</h2>
+  <h2 style="text-align:center; margin-bottom:20px;">매출 입력기 (최종 검증)</h2>
 
   <div class="info">
-    <strong>복붙 or  수동 입력</strong><br>
+    <strong>복붙 or 수동 입력</strong><br>
     엑셀: 숫자만 → 열 분리 없음 + 정렬/합계 가능
   </div>
 
   <button class="paste" onclick="openPaste()">카톡 복붙 입력</button>
 
-  <h3 style="margin:20px 0 10px;"> 수동 입력</h3>
+  <h3 style="margin:20px 0 10px;">수동 입력</h3>
   <table id="form">
     <tr><th>항목</th><th>입력</th></tr>
     <tr><td>날짜</td><td><input type="text" id="date" placeholder="11/9" /></td></tr>
@@ -61,19 +62,18 @@
   <button class="clear" onclick="resetForm()">입력 초기화</button>
   <button class="delete" onclick="deleteAll()">전체 삭제</button>
   <button class="export" onclick="exportCSV()">엑셀 내보내기</button>
+  <button class="import" onclick="openImport()">엑셀 불러오기</button>
 
   <div id="resultSummary" class="success" style="display:none; text-align:center; font-weight:bold;"></div>
   <div id="resultList" class="result-list" style="display:none;"></div>
 
-  <h3 style="margin:20px 0 10px;">📋 저장된 데이터 (클릭하여 수정)</h3>
+  <h3 style="margin:20px 0 10px;">저장된 데이터 (클릭하여 수정)</h3>
   <div id="dataList" class="data-list"><p>데이터 없음</p></div>
 
   <div class="cumulative" id="cumulative"><strong>데이터 없음</strong></div>
 
-  <!-- 무단사용 금지 문구 추가 -->
   <div class="warning">
-    <strong>⚠️ 무단 사용 및 배포 금지 ⚠️</strong><br>
-    제작자:roasterhealing@gmail.com <br>
+    <strong>무단 사용 및 배포 금지</strong><br>
     본 앱은 내부용으로 제작되었으며, 무단 복제·배포·상업적 이용 시 법적 책임이 따를 수 있습니다.
   </div>
 </div>
@@ -90,16 +90,26 @@
   </div>
 </div>
 
+<!-- 엑셀 불러오기 팝업 -->
+<div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999;">
+  <div style="background:#fff; margin:15% auto; padding:20px; width:90%; max-width:500px; border-radius:12px;">
+    <h3>엑셀 불러오기</h3>
+    <input type="file" id="csvFile" accept=".csv" style="width:100%; padding:10px; margin:10px 0;" />
+    <div style="text-align:center;">
+      <button onclick="importCSV()" style="background:#17a2b8; color:#fff; padding:12px 20px; border:none; border-radius:8px;">불러오기</button>
+      <button onclick="closeImport()" style="background:#6c757d; color:#fff; padding:12px 20px; border:none; border-radius:8px; margin-left:10px;">취소</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const KEY = 'salesData';
 
-// 수동 입력 계산 (앱 내는 콤마 + 원 유지)
 function calc() {
   const sum = ['hol','bae','ku','yo'].reduce((s, id) => s + (parseFloat(document.getElementById(id).value) || 0), 0);
   document.getElementById('total').textContent = sum.toLocaleString() + ' 원';
 }
 
-// 수동 저장
 function saveManual() {
   const date = normalizeDate(document.getElementById('date').value);
   if (!date) return alert('날짜 입력');
@@ -107,11 +117,13 @@ function saveManual() {
   if (total === 0) return alert('매출 입력');
 
   const data = {
-    date, hol: +document.getElementById('hol').value || 0,
+    date: date,
+    hol: +document.getElementById('hol').value || 0,
     bae: +document.getElementById('bae').value || 0,
     ku: +document.getElementById('ku').value || 0,
     yo: +document.getElementById('yo').value || 0,
-    total, kaowi: +document.getElementById('kaowi').value || 0,
+    total: total,
+    kaowi: +document.getElementById('kaowi').value || 0,
     sunsal: +document.getElementById('sunsal').value || 0,
     worker: document.getElementById('worker').value.trim(),
     off: document.getElementById('off').value.trim()
@@ -133,15 +145,13 @@ function saveManual() {
   updateCum();
 }
 
-// 입력 초기화
 function resetForm() {
   document.getElementById('form').reset();
   calc();
 }
 
-// 전체 삭제
 function deleteAll() {
-  if (confirm('⚠️ 모든 데이터 삭제?')) {
+  if (confirm('모든 데이터 삭제?')) {
     localStorage.setItem(KEY, '[]');
     loadDataList();
     updateCum();
@@ -149,24 +159,17 @@ function deleteAll() {
   }
 }
 
-// 데이터 목록 로드
 function loadDataList() {
   let list = JSON.parse(localStorage.getItem(KEY) || '[]');
   list.sort((a, b) => a.date.localeCompare(b.date));
   let html = '';
   list.forEach((r, i) => {
     const formatted = r.date.replace(/(\d{2})-(\d{2})/, '$1/$2');
-    html += `
-      <div class="data-item">
-        <button class="date-btn" onclick="editData(${i})">${formatted}</button>
-        <button class="delete-btn" onclick="deleteSingle(${i})">삭제</button>
-      </div>
-    `;
+    html += '<div class="data-item"><button class="date-btn" onclick="editData(' + i + ')">' + formatted + '</button><button class="delete-btn" onclick="deleteSingle(' + i + ')">삭제</button></div>';
   });
   document.getElementById('dataList').innerHTML = html || '<p>데이터 없음</p>';
 }
 
-// 개별 수정
 function editData(index) {
   const list = JSON.parse(localStorage.getItem(KEY) || '[]');
   const data = list[index];
@@ -187,7 +190,6 @@ function editData(index) {
   alert('수정할 데이터 불러옴 → 저장 버튼 누르세요');
 }
 
-// 개별 삭제
 function deleteSingle(index) {
   if (confirm('이 날짜 데이터를 삭제하시겠습니까?')) {
     let list = JSON.parse(localStorage.getItem(KEY) || '[]');
@@ -198,7 +200,6 @@ function deleteSingle(index) {
   }
 }
 
-// 엑셀 내보내기 (숫자만)
 function exportCSV() {
   let list = JSON.parse(localStorage.getItem(KEY) || '[]');
   if (!list.length) return alert('데이터 없음');
@@ -212,16 +213,13 @@ function exportCSV() {
     const [month, day] = r.date.split('-');
     const dateObj = new Date(2025, parseInt(month)-1, parseInt(day));
     const yoil = dateObj.toLocaleDateString('ko-KR', {weekday:'short'});
-    
-    csv += `${r.date},${yoil},${r.hol},${r.bae},${r.ku},${r.yo},${r.total},${r.kaowi.toFixed(1)},${r.sunsal.toFixed(1)},${r.worker},${r.off}\n`;
-    
+    csv += r.date + ',' + yoil + ',' + r.hol + ',' + r.bae + ',' + r.ku + ',' + r.yo + ',' + r.total + ',' + r.kaowi.toFixed(1) + ',' + r.sunsal.toFixed(1) + ',' + r.worker + ',' + r.off + '\n';
     sum.hol += r.hol; sum.bae += r.bae; sum.ku += r.ku; sum.yo += r.yo;
     sum.total += r.total; sum.kaowi += r.kaowi; sum.sunsal += r.sunsal;
   });
+  csv += '합계,-,' + sum.hol + ',' + sum.bae + ',' + sum.ku + ',' + sum.yo + ',' + sum.total + ',' + sum.kaowi.toFixed(1) + ',' + sum.sunsal.toFixed(1) + ',,\n';
 
-  csv += `합계,-,${sum.hol},${sum.bae},${sum.ku},${sum.yo},${sum.total},${sum.kaowi.toFixed(1)},${sum.sunsal.toFixed(1)},,\n`;
-
-  const fileName = `매출_전체_${new Date().toISOString().slice(0,10)}.csv`;
+  const fileName = '매출_전체_' + new Date().toISOString().slice(0,10) + '.csv';
   const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -229,7 +227,57 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-// 카톡 복붙 파싱
+function openImport() {
+  document.getElementById('importModal').style.display = 'block';
+}
+function closeImport() {
+  document.getElementById('importModal').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+}
+function importCSV() {
+  const file = document.getElementById('csvFile').files[0];
+  if (!file) return alert('파일 선택');
+  if (!file.name.endsWith('.csv')) return alert('CSV 파일만 가능');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('합계'));
+    let imported = 0;
+    let list = JSON.parse(localStorage.getItem(KEY) || '[]');
+
+    lines.forEach(line => {
+      const cols = line.split(',');
+      if (cols.length < 9) return;
+      const date = cols[0];
+      if (!/^\d{2}-\d{2}$/.test(date)) return;
+      if (list.some(r => r.date === date)) return;
+
+      const data = {
+        date: date,
+        hol: parseInt(cols[2]) || 0,
+        bae: parseInt(cols[3]) || 0,
+        ku: parseInt(cols[4]) || 0,
+        yo: parseInt(cols[5]) || 0,
+        total: parseInt(cols[6]) || 0,
+        kaowi: parseFloat(cols[7]) || 0,
+        sunsal: parseFloat(cols[8]) || 0,
+        worker: cols[9] || '',
+        off: cols[10] || ''
+      };
+      list.push(data);
+      imported++;
+    });
+
+    localStorage.setItem(KEY, JSON.stringify(list));
+    closeImport();
+    loadDataList();
+    updateCum();
+    alert('불러오기 완료: ' + imported + '건 추가');
+  };
+  reader.readAsText(file);
+}
+
 function parseKakao() {
   let text = document.getElementById('pasteText').value;
   text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\u00A0/g, ' ').trim();
@@ -299,7 +347,7 @@ function parseNum(str) {
 
 function normalizeDate(d) {
   const match = d.match(/(\d+)\/(\d+)/);
-  return match ? `${match[1].padStart(2,'0')}-${match[2].padStart(2,'0')}` : null;
+  return match ? match[1].padStart(2,'0') + '-' + match[2].padStart(2,'0') : null;
 }
 
 function updateCum() {
@@ -312,18 +360,14 @@ function updateCum() {
   const kaowi = list.reduce((s, r) => s + r.kaowi, 0);
   const sunsal = list.reduce((s, r) => s + r.sunsal, 0);
   const count = list.length;
-  document.getElementById('cumulative').innerHTML = `
-    <strong>전체 누적 (${count}건)</strong><br>
-    매출: <strong>${total.toLocaleString()} 원</strong><br>
-    카오위: <strong>${kaowi.toFixed(1)}</strong> | 순살: <strong>${sunsal.toFixed(1)}</strong>
-  `;
+  document.getElementById('cumulative').innerHTML = '<strong>전체 누적 (' + count + '건)</strong><br>매출: <strong>' + total.toLocaleString() + ' 원</strong><br>카오위: <strong>' + kaowi.toFixed(1) + '</strong> | 순살: <strong>' + sunsal.toFixed(1) + '</strong>';
 }
 
 function displayResults(results, saved) {
   const summary = document.getElementById('resultSummary');
   const list = document.getElementById('resultList');
   
-  summary.innerHTML = `<strong>총 ${results.length}건 중 ${saved}건 저장 완료!</strong>`;
+  summary.innerHTML = '<strong>총 ' + results.length + '건 중 ' + saved + '건 저장 완료!</strong>';
   summary.style.display = 'block';
 
   let html = '';
@@ -331,7 +375,7 @@ function displayResults(results, saved) {
     const formatted = r.date.replace(/(\d{2})-(\d{2})/, '$1/$2');
     const icon = r.status === 'success' ? '성공' : (r.status === 'duplicate' ? '중복' : '실패');
     const msg = r.status === 'success' ? '저장' : (r.status === 'duplicate' ? '중복' : '실패');
-    html += `<div class="result-item"><span>${formatted}</span><span class="${r.status === 'success' ? 'success' : 'fail'}">${icon} ${msg}</span></div>`;
+    html += '<div class="result-item"><span>' + formatted + '</span><span class="' + (r.status === 'success' ? 'success' : 'fail') + '">' + icon + ' ' + msg + '</span></div>';
   });
   list.innerHTML = html;
   list.style.display = 'block';
@@ -347,7 +391,7 @@ function closePaste() {
   document.getElementById('pasteText').value = '';
 }
 
-window.onload = () => {
+window.onload = function() {
   calc();
   loadDataList();
   updateCum();
